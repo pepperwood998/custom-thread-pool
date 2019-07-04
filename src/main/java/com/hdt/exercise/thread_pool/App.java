@@ -7,10 +7,10 @@ public class App {
         for (int i = 1; i <= 100; i++) {
             Task task = new Task("Task " + i);
 
-                customThreadPool.execute(task);
-                System.out.println("Added : " + task.getName());
+            customThreadPool.execute(task);
+            System.out.println("Added : " + task.getName());
         }
-        
+
         customThreadPool.shutdown();
     }
 }

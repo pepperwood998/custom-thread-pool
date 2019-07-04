@@ -52,6 +52,7 @@ public class CustomThreadPool {
     }
 
     public void shutdown() {
+        System.out.println("----- SHUTDOWN -----");
         for (WorkerThread worker : mWorkers) {
             worker.close();
         }
@@ -60,13 +61,12 @@ public class CustomThreadPool {
     private class WorkerThread extends Thread {
 
         private boolean mActive;
-
-        public boolean isActive() {
-            return mActive;
+        
+        public WorkerThread() {
+            mActive = true;
         }
 
         public void run() {
-            mActive = true;
             Runnable task = null;
 
             while (true) {
@@ -77,16 +77,21 @@ public class CustomThreadPool {
 
                 try {
                     if (task != null) {
-                        System.out.println("Active Thread Number: " + mActiveThreads);
+//                        System.out.println("Active Thread Number: " + mActiveThreads);
                         task.run();
                     } else {
-                        if (!isActive())
+                        if (!mActive) {
+                            System.out.println(Thread.currentThread().getName() + " - main break");
                             break;
-                        else {
+                        } else {
                             synchronized (mQueue) {
                                 while (mQueue.isEmpty()) {
                                     try {
                                         mQueue.wait();
+                                        if (!mActive) {
+                                            System.out.println(Thread.currentThread().getName() + " - semi break");
+                                            break;
+                                        }
                                     } catch (InterruptedException e) {
                                         System.out.println("An error occurred while queue is waiting: " 
                                                             + e.getMessage());
