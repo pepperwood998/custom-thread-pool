@@ -2,9 +2,9 @@ package com.hdt.exercise.thread_pool;
 
 public class App {
     public static void main(String[] args) {
-        CustomThreadPool customThreadPool = new CustomThreadPool(5, 8, 20);
+        CustomThreadPool customThreadPool = new CustomThreadPool(55, 58, 3);
 
-        for (int i = 1; i <= 100; i++) {
+        for (int i = 1; i <= 30; i++) {
             Task task = new Task("Task " + i);
 
             customThreadPool.execute(task);

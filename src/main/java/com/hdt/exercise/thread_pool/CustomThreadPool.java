@@ -1,7 +1,7 @@
 package com.hdt.exercise.thread_pool;
 
 import java.util.ArrayList;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CustomThreadPool {
@@ -13,16 +13,16 @@ public class CustomThreadPool {
     private ArrayList<WorkerThread> mWorkers;
 
     // FIFO ordering
-    private final LinkedBlockingQueue<Runnable> mQueue;
+    private final CustomBlockingQueue<Runnable> mQueue;
 
     public CustomThreadPool(int corePoolSize, int maxPoolSize, int queueSize) {
         mCorePoolSize = corePoolSize;
         mMaxPoolSize = maxPoolSize;
-        mQueue = new LinkedBlockingQueue<>(queueSize);
+        mQueue = new CustomBlockingQueue<>(this, queueSize);
         mWorkers = new ArrayList<>();
 
         for (int i = 0; i < corePoolSize; i++) {
-            mWorkers.add(new WorkerThread());
+            mWorkers.add(new WorkerThread(true));
             mWorkers.get(i).start();
         }
 
@@ -31,84 +31,46 @@ public class CustomThreadPool {
     }
 
     public void execute(Runnable task) {
-        synchronized (mQueue) {
-            // when queue is full, initialize more threads
-            while (mQueue.remainingCapacity() == 0) {
-                if (mActiveThreads.get() < mMaxPoolSize) {
-                    mWorkers.add(new WorkerThread());
-                    mWorkers.get(mActiveThreads.getAndAdd(1)).start();
-                }
-
-                try {
-                    mQueue.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            mQueue.add(task);
-            mQueue.notifyAll();
-        }
+        mQueue.enqueue(task, mActiveThreads, mMaxPoolSize);
     }
 
     public void shutdown() {
-        System.out.println("----- SHUTDOWN -----");
         for (WorkerThread worker : mWorkers) {
             worker.close();
         }
     }
 
+    public void addAndStartNewThread() {
+        mWorkers.add(new WorkerThread(false));
+        mWorkers.get(mActiveThreads.getAndAdd(1)).start();
+    }
+
     private class WorkerThread extends Thread {
 
-        private boolean mActive;
-        
-        public WorkerThread() {
-            mActive = true;
+        private AtomicBoolean mActive;
+        private boolean mIsCore;
+
+        public WorkerThread(boolean isCore) {
+            mActive = new AtomicBoolean(true);
+            mIsCore = isCore;
         }
 
         public void run() {
             Runnable task = null;
 
             while (true) {
-                synchronized (mQueue) {
-                    mQueue.notifyAll();
-                    task = mQueue.poll();
+                task = mQueue.dequeue(mActive);
+
+                if (task == null) {
+                    break;
                 }
 
-                try {
-                    if (task != null) {
-//                        System.out.println("Active Thread Number: " + mActiveThreads);
-                        task.run();
-                    } else {
-                        if (!mActive) {
-                            System.out.println(Thread.currentThread().getName() + " - main break");
-                            break;
-                        } else {
-                            synchronized (mQueue) {
-                                while (mQueue.isEmpty()) {
-                                    try {
-                                        mQueue.wait();
-                                        if (!mActive) {
-                                            System.out.println(Thread.currentThread().getName() + " - semi break");
-                                            break;
-                                        }
-                                    } catch (InterruptedException e) {
-                                        System.out.println("An error occurred while queue is waiting: " 
-                                                            + e.getMessage());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (RuntimeException e) {
-                    System.out.println("Thread pool is interrupted due to an issue: " 
-                                        + e.getMessage());
-                }
+                task.run();
             }
         }
 
         public void close() {
-            mActive = false;
+            mActive.set(false);
         }
     }
 }
