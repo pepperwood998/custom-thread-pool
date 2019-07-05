@@ -5,11 +5,12 @@ public class App {
     static int corePoolSize = 15;
     static int maxPoolSize = 18;
     static int queueSize = 30;
+    static int taskNum = 10;
     
     public static void main(String[] args) {
         CustomThreadPool customThreadPool = new CustomThreadPool(corePoolSize, maxPoolSize, queueSize);
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= taskNum; i++) {
             Task task = new Task("Task " + i);
 
             customThreadPool.execute(task);
