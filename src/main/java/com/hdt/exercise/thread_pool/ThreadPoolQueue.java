@@ -7,9 +7,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadPoolQueue<T> {
 
-    private final CustomThreadPool mThreadPool;
-    private final Queue<T> mQueue;
-    private final int mMaxQueueSize;
+    private CustomThreadPool mThreadPool;
+    private Queue<T> mQueue;
+    private int mMaxQueueSize;
+    private final int KEEP_ALIVE_TIME = 6000;
 
     public ThreadPoolQueue(CustomThreadPool threadPool, int maxQueueSize) {
         mThreadPool = threadPool;
@@ -42,7 +43,7 @@ public class ThreadPoolQueue<T> {
                     if (isCore) {
                         wait();
                     } else {
-                        wait(6000);
+                        wait(KEEP_ALIVE_TIME);
                         if (mQueue.isEmpty()) {
                             active.set(false);
                         }

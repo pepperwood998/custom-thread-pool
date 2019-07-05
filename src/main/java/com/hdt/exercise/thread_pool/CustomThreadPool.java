@@ -8,7 +8,6 @@ public class CustomThreadPool {
 
     private int mMaxPoolSize;
     private AtomicInteger mActiveThreads;
-
     private ArrayList<WorkerThread> mWorkers;
 
     // FIFO ordering
