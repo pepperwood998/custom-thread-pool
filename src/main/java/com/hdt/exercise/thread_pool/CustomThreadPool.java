@@ -6,23 +6,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class CustomThreadPool {
 
-    private int mCorePoolSize;
     private int mMaxPoolSize;
     private AtomicInteger mActiveThreads;
 
     private ArrayList<WorkerThread> mWorkers;
 
     // FIFO ordering
-    private final CustomBlockingQueue<Runnable> mQueue;
+    private final ThreadPoolQueue<Runnable> mQueue;
 
     public CustomThreadPool(int corePoolSize, int maxPoolSize, int queueSize) {
-        mCorePoolSize = corePoolSize;
         mMaxPoolSize = maxPoolSize;
-        mQueue = new CustomBlockingQueue<>(this, queueSize);
+        mQueue = new ThreadPoolQueue<>(this, queueSize);
         mWorkers = new ArrayList<>();
 
         for (int i = 0; i < corePoolSize; i++) {
-            mWorkers.add(new WorkerThread(true));
+            mWorkers.add(new WorkerThread("Thread-" + (i + 1), true));
             mWorkers.get(i).start();
         }
 
@@ -38,11 +36,21 @@ public class CustomThreadPool {
         for (WorkerThread worker : mWorkers) {
             worker.close();
         }
+
+        synchronized (mQueue) {
+            mQueue.notifyAll();
+        }
     }
 
     public void addAndStartNewThread() {
-        mWorkers.add(new WorkerThread(false));
+        mWorkers.add(new WorkerThread("Thread-" + (mActiveThreads.get() + 1), false));
         mWorkers.get(mActiveThreads.getAndAdd(1)).start();
+    }
+    
+    public void removeRedundantThreads() {
+        mWorkers.remove((WorkerThread) Thread.currentThread());
+        mActiveThreads.set(mWorkers.size());
+        System.out.println("After break " + Thread.currentThread().getName() + ", Active Threads: " + mActiveThreads.get());
     }
 
     private class WorkerThread extends Thread {
@@ -50,7 +58,8 @@ public class CustomThreadPool {
         private AtomicBoolean mActive;
         private boolean mIsCore;
 
-        public WorkerThread(boolean isCore) {
+        public WorkerThread(String name, boolean isCore) {
+            super(name);
             mActive = new AtomicBoolean(true);
             mIsCore = isCore;
         }
@@ -59,7 +68,7 @@ public class CustomThreadPool {
             Runnable task = null;
 
             while (true) {
-                task = mQueue.dequeue(mActive);
+                task = mQueue.dequeue(mActive, mActiveThreads, mIsCore);
 
                 if (task == null) {
                     break;

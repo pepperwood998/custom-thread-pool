@@ -5,13 +5,13 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class CustomBlockingQueue<T> {
+public class ThreadPoolQueue<T> {
 
     private final CustomThreadPool mThreadPool;
     private final Queue<T> mQueue;
     private final int mMaxQueueSize;
 
-    public CustomBlockingQueue(CustomThreadPool threadPool, int maxQueueSize) {
+    public ThreadPoolQueue(CustomThreadPool threadPool, int maxQueueSize) {
         mThreadPool = threadPool;
         mQueue = new LinkedList<>();
         mMaxQueueSize = maxQueueSize;
@@ -30,20 +30,25 @@ public class CustomBlockingQueue<T> {
         } catch (InterruptedException e) {
             System.out.println("Waiting for queue resize failed");
         }
-        System.out.println("Active Threads: " + activeThreads);
-        if (mQueue.isEmpty()) {
-            notifyAll();
-        }
 
         mQueue.offer(task);
+        notifyAll();
     }
 
-    public synchronized T dequeue(AtomicBoolean active) {
+    public synchronized T dequeue(AtomicBoolean active, AtomicInteger activeThreads, boolean isCore) {
         try {
             while (mQueue.isEmpty()) {
                 if (active.get()) {
-                    wait(100);
+                    if (isCore) {
+                        wait();
+                    } else {
+                        wait(6000);
+                        if (mQueue.isEmpty()) {
+                            active.set(false);
+                        }
+                    }
                 } else {
+                    mThreadPool.removeRedundantThreads();
                     return null;
                 }
             }
