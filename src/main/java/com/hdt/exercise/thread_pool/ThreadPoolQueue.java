@@ -36,16 +36,16 @@ public class ThreadPoolQueue<T> {
         notifyAll();
     }
 
-    public synchronized T dequeue(AtomicBoolean active, AtomicInteger activeThreads, boolean isCore) {
+    public synchronized T dequeue(AtomicBoolean closable, AtomicInteger activeThreads, boolean isCore) {
         try {
             while (mQueue.isEmpty()) {
-                if (active.get()) {
+                if (closable.get()) {
                     if (isCore) {
                         wait();
                     } else {
                         wait(KEEP_ALIVE_TIME);
                         if (mQueue.isEmpty()) {
-                            active.set(false);
+                            closable.set(false);
                         }
                     }
                 } else {

@@ -57,12 +57,12 @@ public class CustomThreadPool {
 
     private class WorkerThread extends Thread {
 
-        private AtomicBoolean mActive;
+        private AtomicBoolean mClosable;
         private boolean mIsCore;
 
         public WorkerThread(String name, boolean isCore) {
             super(name);
-            mActive = new AtomicBoolean(true);
+            mClosable = new AtomicBoolean(true);
             mIsCore = isCore;
         }
 
@@ -70,7 +70,7 @@ public class CustomThreadPool {
             Runnable task = null;
 
             while (true) {
-                task = mQueue.dequeue(mActive, mActiveThreads, mIsCore);
+                task = mQueue.dequeue(mClosable, mActiveThreads, mIsCore);
 
                 if (task == null) {
                     break;
@@ -81,7 +81,7 @@ public class CustomThreadPool {
         }
 
         public void close() {
-            mActive.set(false);
+            mClosable.set(false);
         }
     }
 }
