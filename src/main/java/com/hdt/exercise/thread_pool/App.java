@@ -1,8 +1,13 @@
 package com.hdt.exercise.thread_pool;
 
 public class App {
+
+    static int corePoolSize = 15;
+    static int maxPoolSize = 18;
+    static int queueSize = 30;
+    
     public static void main(String[] args) {
-        CustomThreadPool customThreadPool = new CustomThreadPool(15, 18, 30);
+        CustomThreadPool customThreadPool = new CustomThreadPool(corePoolSize, maxPoolSize, queueSize);
 
         for (int i = 1; i <= 10; i++) {
             Task task = new Task("Task " + i);

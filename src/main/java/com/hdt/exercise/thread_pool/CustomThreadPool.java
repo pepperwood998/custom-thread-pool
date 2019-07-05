@@ -32,10 +32,13 @@ public class CustomThreadPool {
     }
 
     public void shutdown() {
+        // put worker threads in closable state
         for (WorkerThread worker : mWorkers) {
             worker.close();
         }
 
+        // notify all worker threads that are waiting
+        // to end the life cycle when they are closable
         synchronized (mQueue) {
             mQueue.notifyAll();
         }
